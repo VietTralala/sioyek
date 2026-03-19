@@ -23,7 +23,40 @@ else
 	qmake "CONFIG+=non_portable" pdf_viewer_build_config.pro
 fi
 
-make -j$MAKE_PARALLEL
+# On newer Command Line Tools SDKs, AGL may be missing.
+# Prefer a macOS 15 SDK for linking on Apple Silicon when available.
+qt_lib_path=$(qmake -query QT_INSTALL_LIBS 2>/dev/null || true)
+if [ -z "$qt_lib_path" ] && [ -n "${Qt6_DIR:-}" ]; then
+  qt_lib_path="$Qt6_DIR/lib"
+fi
+
+if [ -z "${MACOS_SDK_PATH:-}" ]; then
+  if [ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk" ]; then
+    MACOS_SDK_PATH="/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk"
+  elif [ -d "/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk" ]; then
+    MACOS_SDK_PATH="/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk"
+  else
+    for candidate_sdk in /Library/Developer/CommandLineTools/SDKs/MacOSX15*.sdk; do
+      if [ -d "$candidate_sdk" ]; then
+        MACOS_SDK_PATH="$candidate_sdk"
+      fi
+    done
+  fi
+fi
+
+if [ "$(uname -m)" = "arm64" ] && [ -n "${MACOS_SDK_PATH:-}" ] && [ -d "$MACOS_SDK_PATH" ]; then
+  sdk_version="$(basename "$MACOS_SDK_PATH")"
+  sdk_version="${sdk_version#MacOSX}"
+  sdk_version="${sdk_version%.sdk}"
+  make_lflags="-stdlib=libc++ -headerpad_max_install_names -arch arm64 -isysroot $MACOS_SDK_PATH -mmacosx-version-min=15 -Wl,-sdk_version -Wl,$sdk_version -Wl,-rpath,@executable_path/../Frameworks"
+  if [ -n "$qt_lib_path" ]; then
+    make_lflags="$make_lflags -Wl,-rpath,$qt_lib_path"
+  fi
+  echo "Using SDK override for link: $MACOS_SDK_PATH"
+  make -j"$MAKE_PARALLEL" LFLAGS="$make_lflags"
+else
+  make -j$MAKE_PARALLEL
+fi
 
 rm -rf build 2> /dev/null
 mkdir build

@@ -216,6 +216,8 @@ mac {
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 15
     ICON = pdf_viewer\icon2.ico
     QMAKE_INFO_PLIST = resources/Info.plist
+    QMAKE_LIBS_OPENGL = -framework OpenGL
+    LIBS -= -framework AGL
     LIBS += -framework AppKit
     OBJECTIVE_SOURCES += pdf_viewer/macos_specific.mm
 }

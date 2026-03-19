@@ -187,6 +187,12 @@ mv build/sioyek.app /Applications/
 sudo codesign --force --sign - --deep /Applications/sioyek.app
 ```
 
+If linking fails with `framework 'AGL' not found` on Apple Silicon (usually due to newer CLT SDK defaults), `build_mac.sh` now auto-detects and prefers a macOS 15 SDK from CommandLineTools when available. You can also override this explicitly:
+
+```
+MACOS_SDK_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk MAKE_PARALLEL=8 ./build_mac.sh
+```
+
 ## Donation
 If you enjoy sioyek, please consider donating to support its development.
 
