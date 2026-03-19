@@ -200,6 +200,7 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.7.2'
+        arch: 'clang_64'
         modules: 'all'
         cache: true
 
@@ -245,14 +246,27 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.7.2'
+        arch: 'clang_arm64'
         modules: 'all'
         cache: true
+
+    - name: Verify Qt architecture
+      run: |
+        uname -m
+        which qmake
+        file "$(which qmake)"
+        qmake -query QT_HOST_ARCH
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         chmod +x build_mac.sh
         MAKE_PARALLEL=$(sysctl -n hw.logicalcpu) ./build_mac.sh
+        lipo -archs build/sioyek.app/Contents/MacOS/sioyek | tee /tmp/sioyek-arch.txt
+        case "$(cat /tmp/sioyek-arch.txt)" in
+          *arm64*) ;;
+          *) echo "Expected arm64 build artifact"; exit 1 ;;
+        esac
         mv sioyek-release-mac.zip sioyek-release-mac-arm.zip
         
     - name: upload mac artifact
